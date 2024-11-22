@@ -4,30 +4,44 @@ import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
+export const protect = asyncHandler(async (rq, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return next(new AppError("You Are Not Logged In", 500));
+  }
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    return next(new AppError("User Not found", 500));
+  }
+  req.id = decoded.id;
+  decoded ? next() : next(new AppError("Please Log In And Try Again"));
+});
 export const signup = asyncHandler(async (req, res, next) => {
-  const { name, fullName, email, password } = req.body;
+  const { name, fullName, email, password, profilePic } = req.body;
   const user = await User.findOne({ email });
   if (user) {
     return next(new AppError("User Already Existed", 500));
   }
-  const hashedPassword = await bcrypt.hash(password, 12);
   const newUser = await User.create({
     name,
     fullName,
     email,
-    password: hashedPassword,
+    password,
+    profilePic,
   });
   res.status(201).json({
     status: "success",
     user: {
       ...newUser._doc,
+      password: undefined,
     },
   });
 });
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
-  const isMatched = await bcrypt.compare(password, this.password);
+  const isMatched = await bcrypt.compare(password, user.password);
   if (!user || !isMatched) {
     return next(new AppError("Invalid Email or password", 404));
   }
@@ -42,7 +56,26 @@ export const login = asyncHandler(async (req, res, next) => {
       token,
       user: {
         ...user._doc,
-        token,
+        password: undefined,
       },
     });
 });
+export const logout = asyncHandler(async (req, res, next) => {
+  res.clearCookie("token").status(200).json({
+    status: "success",
+    message: "Logged Out Successfully",
+  });
+});
+export const updateProfile = asyncHandler(async (req, res, next) => {
+  const user = await User.findByIdAndUpdate(req.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  if (!user) {
+    return next(new AppError("User Not Found", 500));
+  }
+  res.json({
+    status: "success",
+    user,
+  });
+})
