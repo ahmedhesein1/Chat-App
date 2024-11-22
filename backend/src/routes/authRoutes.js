@@ -4,5 +4,6 @@ const router = express.Router();
 router.post("/signup", authControl.signup);
 router.post("/login", authControl.login);
 router.get("/logout", authControl.protect, authControl.logout);
-router.patch('update-profile',authControl.protect,authControl.updateProfile)
+router.patch('/update-profile', authControl.protect, authControl.updateProfile);
+router.get('/check', authControl.protect, authControl.checkAuth);
 export default router;
