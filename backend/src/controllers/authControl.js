@@ -4,7 +4,8 @@ import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-export const protect = asyncHandler(async (rq, res, next) => {
+import cloudinary from "../cloudinary/cloudinary.js";
+export const protect = asyncHandler(async (req, res, next) => {
   const token = req.cookies.token;
   if (!token) {
     return next(new AppError("You Are Not Logged In", 500));
@@ -67,15 +68,34 @@ export const logout = asyncHandler(async (req, res, next) => {
   });
 });
 export const updateProfile = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-  if (!user) {
+  const { profilePic } = req.body;
+  if (!profilePic) {
     return next(new AppError("User Not Found", 500));
   }
+  const upload = await cloudinary.uploader.upload(profilePic);
+  const user = await User.findByIdAndUpdate(
+    req.id,
+    {
+      profilePic: upload.secure_url,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
   res.json({
     status: "success",
     user,
   });
-})
+});
+export const checkAuth = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.id);
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+  res.status(200).json({
+    success: true,
+    ...user._doc,
+    password: undefined,
+  });
+});
