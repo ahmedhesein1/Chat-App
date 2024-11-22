@@ -2,10 +2,6 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 const User = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "username is required"],
-    },
     fullName: {
       type: String,
       required: [true, "full Name Is required"],

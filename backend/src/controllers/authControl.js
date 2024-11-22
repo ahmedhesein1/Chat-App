@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import AppError from "../utils/AppError.js";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-import cloudinary from "../cloudinary/cloudinary.js";
+import cloudinary from "../lib/cloudinary.js";
 export const protect = asyncHandler(async (req, res, next) => {
   const token = req.cookies.token;
   if (!token) {
@@ -88,14 +88,11 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     user,
   });
 });
-export const checkAuth = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.id);
-  if (!user) {
-    return next(new AppError("User not found", 404));
+export const checkAuth = (req, res) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (error) {
+    console.log("Error in checkAuth controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
-  res.status(200).json({
-    success: true,
-    ...user._doc,
-    password: undefined,
-  });
-});
+};
